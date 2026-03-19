@@ -1,0 +1,174 @@
+{
+	"name": "df_analytics",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_products_structured",
+						"type": "DatasetReference"
+					},
+					"name": "Products"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_orders_structured",
+						"type": "DatasetReference"
+					},
+					"name": "Orders"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_stores_structured",
+						"type": "DatasetReference"
+					},
+					"name": "Stores"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_analytics_stores_orders_monthly",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_analytics_product_order_monthly",
+						"type": "DatasetReference"
+					},
+					"name": "sink2"
+				}
+			],
+			"transformations": [
+				{
+					"name": "ProductMonthly"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "derivedColumn1",
+					"description": "Creating/updating the columns 'PRODUCT_NAME, ORDER_DATETIME, ORDER_STATUS, TOTAL_AMOUNT'"
+				},
+				{
+					"name": "filter1"
+				},
+				{
+					"name": "select2"
+				},
+				{
+					"name": "join1"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "select3"
+				},
+				{
+					"name": "filter2"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          PRODUCT_ID as integer,",
+				"          PRODUCT_NAME as string,",
+				"          UNIT_PRICE as double,",
+				"          UPDATED_TIMESTAMP as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> Products",
+				"source(output(",
+				"          ORDER_ID as integer,",
+				"          ORDER_DATETIME as string,",
+				"          CUSTOMER_ID as integer,",
+				"          ORDER_STATUS as string,",
+				"          STORE_ID as integer,",
+				"          PRODUCT_ID as integer,",
+				"          UNIT_PRICE as double,",
+				"          QUANTITY as integer,",
+				"          UPDATED_TIMESTAMP as timestamp,",
+				"          SUBTOTAL as double",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> Orders",
+				"source(output(",
+				"          STORE_ID as integer,",
+				"          STORE_NAME as string,",
+				"          LATITUDE as double,",
+				"          LONGITUDE as double,",
+				"          UPDATED_TIMESTAMP as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> Stores",
+				"Products, Orders join(Products@PRODUCT_ID == Orders@PRODUCT_ID,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> ProductMonthly",
+				"ProductMonthly select(mapColumn(",
+				"          PRODUCT_NAME,",
+				"          ORDER_DATETIME,",
+				"          ORDER_STATUS,",
+				"          SUBTOTAL",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"filter1 derive(TOTAL_AMOUNT = round((SUBTOTAL),2),",
+				"          Month_Year = toString(ORDER_DATETIME, 'mm-yyyy')) ~> derivedColumn1",
+				"select1 filter(ORDER_STATUS != 'CANCELLED') ~> filter1",
+				"derivedColumn1 select(mapColumn(",
+				"          PRODUCT_NAME,",
+				"          ORDER_STATUS,",
+				"          TOTAL_AMOUNT,",
+				"          Month_Year",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select2",
+				"Stores, Orders join(Stores@STORE_ID == Orders@STORE_ID,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> join1",
+				"join1 derive(Total_Amount = round(SUBTOTAL, 2),",
+				"          Month_Year = toString(ORDER_DATETIME, 'mm-yyyy')) ~> derivedColumn2",
+				"derivedColumn2 select(mapColumn(",
+				"          STORE_NAME,",
+				"          LATITUDE,",
+				"          LONGITUDE,",
+				"          ORDER_STATUS,",
+				"          Total_Amount,",
+				"          Month_Year",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select3",
+				"select3 filter(ORDER_STATUS != 'CANCELLED') ~> filter2",
+				"filter2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'parquet',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink1",
+				"select2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'parquet',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink2"
+			]
+		}
+	}
+}

@@ -1,0 +1,9 @@
+{
+	"name": "adf-orders-dev-eastus-001ak",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "7d52f57e-e2d6-44b9-a243-786801864dbf",
+		"tenantId": "600e02a4-07cf-4b53-b26a-668e95476384"
+	}
+}

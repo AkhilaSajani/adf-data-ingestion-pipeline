@@ -1,0 +1,50 @@
+{
+	"name": "test_source",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_dl_orders",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"pSourcefilename": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "source",
+				"fileSystem": "test"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "ORDER_ID",
+				"type": "String"
+			},
+			{
+				"name": "ORDER_DATETIME",
+				"type": "String"
+			},
+			{
+				"name": "CUSTOMER_ID",
+				"type": "String"
+			},
+			{
+				"name": "ORDER_STATUS",
+				"type": "String"
+			},
+			{
+				"name": "STORE_ID",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

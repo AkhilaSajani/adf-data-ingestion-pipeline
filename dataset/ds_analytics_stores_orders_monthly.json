@@ -1,0 +1,24 @@
+{
+	"name": "ds_analytics_stores_orders_monthly",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_dl_orders",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Analytics"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "stores_orders_monthly",
+				"fileSystem": "analytics"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

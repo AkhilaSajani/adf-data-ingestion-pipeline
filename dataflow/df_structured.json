@@ -1,0 +1,236 @@
+{
+	"name": "df_structured",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_cleansed_Orders",
+						"type": "DatasetReference"
+					},
+					"name": "orders"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_cleansed_order_items",
+						"type": "DatasetReference"
+					},
+					"name": "orderitms"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_cleaned_Products",
+						"type": "DatasetReference"
+					},
+					"name": "Products"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_cleansed_Stores",
+						"type": "DatasetReference"
+					},
+					"name": "Stores"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_orders_structured",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_products_structured",
+						"type": "DatasetReference"
+					},
+					"name": "sink2"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_stores_structured",
+						"type": "DatasetReference"
+					},
+					"name": "sink3"
+				}
+			],
+			"transformations": [
+				{
+					"name": "order"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "derivedColumn3"
+				},
+				{
+					"name": "select2"
+				},
+				{
+					"name": "select3"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          ORDER_ID as integer,",
+				"          ORDER_DATETIME as string,",
+				"          CUSTOMER_ID as integer,",
+				"          ORDER_STATUS as string,",
+				"          STORE_ID as integer,",
+				"          UPDATED_TIMESTAMP as timestamp,",
+				"          ORDER_DATE as date",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> orders",
+				"source(output(",
+				"          ORDER_ID as integer,",
+				"          PRODUCT_ID as integer,",
+				"          UNIT_PRICE as double,",
+				"          QUANTITY as integer,",
+				"          UPDATED_TIMESTAMP as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> orderitms",
+				"source(output(",
+				"          PRODUCT_ID as integer,",
+				"          PRODUCT_NAME as string,",
+				"          UNIT_PRICE as double,",
+				"          UPDATED_TIMESTAMP as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> Products",
+				"source(output(",
+				"          STORE_ID as integer,",
+				"          STORE_NAME as string,",
+				"          WEB_ADDRESS as string,",
+				"          LATITUDE as double,",
+				"          LONGITUDE as double,",
+				"          UPDATED_TIMESTAMP as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> Stores",
+				"orders, orderitms join(orders@ORDER_ID == orderitms@ORDER_ID,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> order",
+				"order select(mapColumn(",
+				"          ORDER_ID = orders@ORDER_ID,",
+				"          ORDER_DATETIME,",
+				"          CUSTOMER_ID,",
+				"          ORDER_STATUS,",
+				"          STORE_ID,",
+				"          PRODUCT_ID,",
+				"          UNIT_PRICE,",
+				"          QUANTITY,",
+				"          UPDATED_TIMESTAMP = orders@UPDATED_TIMESTAMP",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"select1 derive(ORDER_ITEM_ID = toInteger(concat(toString(ORDER_ID),toString(PRODUCT_ID))),",
+				"          SUBTOTAL = UNIT_PRICE * QUANTITY,",
+				"          UPDATED_TIMESTAMP = currentUTC()) ~> derivedColumn1",
+				"Products derive(UPDATED_TIMESTAMP = currentUTC()) ~> derivedColumn2",
+				"Stores derive(UPDATED_TIMESTAMP = currentUTC()) ~> derivedColumn3",
+				"derivedColumn3 select(mapColumn(",
+				"          STORE_ID,",
+				"          STORE_NAME,",
+				"          LATITUDE,",
+				"          LONGITUDE,",
+				"          UPDATED_TIMESTAMP",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select2",
+				"derivedColumn1 select(mapColumn(",
+				"          ORDER_ITEM_ID,",
+				"          ORDER_ID,",
+				"          ORDER_DATETIME,",
+				"          CUSTOMER_ID,",
+				"          ORDER_STATUS,",
+				"          STORE_ID,",
+				"          PRODUCT_ID,",
+				"          UNIT_PRICE,",
+				"          QUANTITY,",
+				"          UPDATED_TIMESTAMP,",
+				"          SUBTOTAL",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select3",
+				"select3 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          ORDER_ID as integer,",
+				"          ORDER_DATETIME as string,",
+				"          CUSTOMER_ID as integer,",
+				"          ORDER_STATUS as string,",
+				"          STORE_ID as integer,",
+				"          PRODUCT_ID as integer,",
+				"          UNIT_PRICE as double,",
+				"          QUANTITY as integer,",
+				"          UPDATED_TIMESTAMP as timestamp,",
+				"          SUBTOTAL as double",
+				"     ),",
+				"     format: 'parquet',",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('key',",
+				"          0,",
+				"          ORDER_DATETIME",
+				"     )) ~> sink1",
+				"derivedColumn2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          PRODUCT_ID as integer,",
+				"          PRODUCT_NAME as string,",
+				"          UNIT_PRICE as double,",
+				"          UPDATED_TIMESTAMP as timestamp",
+				"     ),",
+				"     format: 'parquet',",
+				"     partitionFileNames:['Products.parquet'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink2",
+				"select2 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          STORE_ID as integer,",
+				"          STORE_NAME as string,",
+				"          LATITUDE as double,",
+				"          LONGITUDE as double,",
+				"          UPDATED_TIMESTAMP as timestamp",
+				"     ),",
+				"     format: 'parquet',",
+				"     partitionFileNames:['Stores.parquet'],",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     partitionBy('hash', 1)) ~> sink3"
+			]
+		}
+	}
+}

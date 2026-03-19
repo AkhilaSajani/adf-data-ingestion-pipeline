@@ -1,0 +1,40 @@
+{
+	"name": "ds_raw_products",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_dl_orders",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Raw"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "products.json",
+				"folderPath": {
+					"value": "@formatDateTime(utcNow(),'yyyy-MM-dd')",
+					"type": "Expression"
+				},
+				"fileSystem": "raw"
+			}
+		},
+		"schema": {
+			"type": "object",
+			"properties": {
+				"PRODUCT_ID": {
+					"type": "string"
+				},
+				"PRODUCT_NAME": {
+					"type": "string"
+				},
+				"UNIT_PRICE": {
+					"type": "string"
+				}
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
